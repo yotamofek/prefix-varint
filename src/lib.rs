@@ -26,6 +26,7 @@ pub fn read_prefix(byte: u8) -> Result<(u64, usize), OverflowError> {
     Ok(((u64::from(byte) >> (size + 1)), size))
 }
 
+#[inline]
 pub fn read_varint<R>(mut rdr: R) -> io::Result<u64>
 where
     R: Read,
@@ -67,6 +68,7 @@ pub fn calc_varint_size(int: u64) -> usize {
     1.max(bits / 7 + usize::from(bits % 7 > 0))
 }
 
+#[inline]
 pub fn write_varint<W: Write>(mut int: u64, mut f: W) -> io::Result<usize> {
     let size = calc_varint_size(int) as u8;
 
