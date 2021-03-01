@@ -6,8 +6,5 @@ edition = "2018"
 license = "MIT"
 description = "PrefixVarint encoding for u64 integers."
 
-[dependencies]
-num-traits = "0.2"
-
 [dev-dependencies]
 rand = "0.8"
