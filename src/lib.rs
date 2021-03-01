@@ -1,6 +1,7 @@
 #![feature(int_bits_const)]
 
 mod overflow;
+mod rest_buf;
 
 use std::{
     io::{self, Read, Write},
@@ -39,9 +40,8 @@ where
     let (mut int, size) = read_prefix(prefix_byte)?;
 
     let rest = {
-        let mut buf = vec![u8::MIN; size];
-        rdr.read_exact(&mut buf)?;
-
+        let mut buf = rest_buf::RestBuf::new(size);
+        rdr.read_exact(buf.as_mut())?;
         buf
     };
 
