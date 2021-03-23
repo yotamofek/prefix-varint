@@ -1,10 +1,10 @@
-#![feature(int_bits_const)]
+#![feature(int_bits_const, try_blocks)]
 
 mod overflow;
 mod rest_buf;
 
 use std::{
-    io::{self, Read, Write},
+    io::{self, ErrorKind::UnexpectedEof, Read, Write},
     mem::size_of,
 };
 
@@ -51,6 +51,31 @@ where
     for (i, byte) in (1_u8..).zip(rest) {
         int |= u64::from(byte) << usize::from((i * 8) - pad)
     }
+
+    Ok(int)
+}
+
+#[inline]
+pub fn read_varint_from_slice<S: AsRef<[u8]>>(slice: &mut io::Cursor<S>) -> io::Result<u64> {
+    let (int, rest) = slice
+        .get_ref()
+        .as_ref()
+        .split_first()
+        .map(|(&first_byte, rest)| {
+            read_prefix(first_byte).map(|(int, size)| Some((int, rest.get(0..size)?)))
+        })
+        .transpose()?
+        .flatten()
+        .ok_or_else(|| io::Error::from(UnexpectedEof))?;
+
+    let pad = 8_u8.min(rest.len() as u8 + 1);
+
+    let int = (1_u8..).zip(rest).fold(int, |int, (i, &byte)| {
+        int | u64::from(byte) << usize::from((i * 8) - pad)
+    });
+
+    let advance_by = rest.len() as u64 + 1;
+    slice.set_position(slice.position() + advance_by);
 
     Ok(int)
 }

@@ -76,81 +76,71 @@ fn test_read_prefix() -> Result<(), OverflowError> {
 
 #[test]
 fn test_read_varint() -> io::Result<()> {
-    assert_eq!(
-        read_varint(AssertEofCursor::new([0b1010_1011]))?,
-        0b101_0101
+    macro_rules! test_varint_read {
+        ($bytes:expr, ok = $expected:expr) => {
+            assert_eq!(read_varint(AssertEofCursor::new($bytes))?, $expected);
+            assert_eq!(
+                read_varint_from_slice(&mut io::Cursor::new($bytes))?,
+                $expected
+            );
+        };
+        ($bytes:expr, error_kind = $error_kind:expr) => {
+            assert_eq!(
+                read_varint(AssertEofCursor::new($bytes))
+                    .unwrap_err()
+                    .kind(),
+                $error_kind
+            );
+            assert_eq!(
+                read_varint_from_slice(&mut io::Cursor::new($bytes))
+                    .unwrap_err()
+                    .kind(),
+                $error_kind
+            );
+        };
+    }
+
+    test_varint_read!([0b1010_1011], ok = 0b101_0101);
+
+    test_varint_read!([0b1010_1010, 0b1010_1010], ok = 0b10_1010_1010_1010);
+
+    test_varint_read!([0b1010_1010], error_kind = io::ErrorKind::UnexpectedEof);
+
+    test_varint_read!(
+        [0b1010_1100, 0b1010_1010, 0b1010_1010,],
+        ok = 0b1_0101_0101_0101_0101_0101
+    );
+    test_varint_read!(
+        [0b1010_1100, 0b1010_1010],
+        error_kind = io::ErrorKind::UnexpectedEof
     );
 
-    assert_eq!(
-        read_varint(AssertEofCursor::new([0b1010_1010, 0b1010_1010]))?,
-        0b10_1010_1010_1010
+    test_varint_read!(
+        [0b1010_1000, 0b1010_1010, 0b1010_1010, 0b1010_1010],
+        ok = 0b1010_1010_1010_1010_1010_1010_1010
     );
-    assert_eq!(
-        read_varint(AssertEofCursor::new([0b1010_1010]))
-            .unwrap_err()
-            .kind(),
-        io::ErrorKind::UnexpectedEof
+    test_varint_read!(
+        [0b1010_1000, 0b1010_1010, 0b1010_1010],
+        error_kind = io::ErrorKind::UnexpectedEof
     );
 
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
-            0b1010_1100,
-            0b1010_1010,
-            0b1010_1010,
-        ]))?,
-        0b1_0101_0101_0101_0101_0101
-    );
-    assert_eq!(
-        read_varint(AssertEofCursor::new([0b1010_1100, 0b1010_1010]))
-            .unwrap_err()
-            .kind(),
-        io::ErrorKind::UnexpectedEof
-    );
-
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
-            0b1010_1000,
-            0b1010_1010,
-            0b1010_1010,
-            0b1010_1010
-        ]))?,
-        0b1010_1010_1010_1010_1010_1010_1010
-    );
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
-            0b1010_1000,
-            0b1010_1010,
-            0b1010_1010
-        ]))
-        .unwrap_err()
-        .kind(),
-        io::ErrorKind::UnexpectedEof
-    );
-
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
+    test_varint_read!(
+        [
             0b1011_0000,
             0b1010_1010,
             0b1010_1010,
             0b1010_1010,
             0b1010_1010
-        ]))?,
-        0b101_0101_0101_0101_0101_0101_0101_0101_0101
+        ],
+        ok = 0b101_0101_0101_0101_0101_0101_0101_0101_0101
     );
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
-            0b1011_0000,
-            0b1010_1010,
-            0b1010_1010,
-            0b1010_1010
-        ]))
-        .unwrap_err()
-        .kind(),
-        io::ErrorKind::UnexpectedEof
+    test_varint_read!(
+        [0b1011_0000, 0b1010_1010, 0b1010_1010, 0b1010_1010],
+        error_kind = io::ErrorKind::UnexpectedEof
     );
 
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
+    test_varint_read!(
+        [
             0,
             u8::MAX,
             u8::MAX,
@@ -160,12 +150,12 @@ fn test_read_varint() -> io::Result<()> {
             u8::MAX,
             u8::MAX,
             u8::MAX,
-        ]))?,
-        u64::MAX
+        ],
+        ok = u64::MAX
     );
 
-    assert_eq!(
-        read_varint(AssertEofCursor::new([
+    test_varint_read!(
+        [
             0b1000_0000,
             u8::MAX,
             u8::MAX,
@@ -174,8 +164,8 @@ fn test_read_varint() -> io::Result<()> {
             u8::MAX,
             u8::MAX,
             u8::MAX,
-        ]))?,
-        2_u64.pow(56) - 1
+        ],
+        ok = 2_u64.pow(56) - 1
     );
 
     Ok(())
