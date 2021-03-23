@@ -79,10 +79,13 @@ fn test_read_varint() -> io::Result<()> {
     macro_rules! test_varint_read {
         ($bytes:expr, ok = $expected:expr) => {
             assert_eq!(read_varint(AssertEofCursor::new($bytes))?, $expected);
-            assert_eq!(
-                read_varint_from_slice(&mut io::Cursor::new($bytes))?,
-                $expected
-            );
+
+            let mut cursor = io::Cursor::new($bytes.to_vec());
+            cursor.get_mut().splice(0..0, iter::repeat(0).take(5));
+            cursor.set_position(5);
+
+            assert_eq!(read_varint_from_slice(&mut cursor)?, $expected);
+            assert_eq!(cursor.position(), $bytes.len() as u64 + 5);
         };
         ($bytes:expr, error_kind = $error_kind:expr) => {
             assert_eq!(

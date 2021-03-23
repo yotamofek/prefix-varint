@@ -57,25 +57,29 @@ where
 
 #[inline]
 pub fn read_varint_from_slice<S: AsRef<[u8]>>(slice: &mut io::Cursor<S>) -> io::Result<u64> {
-    let (int, rest) = slice
-        .get_ref()
-        .as_ref()
-        .split_first()
-        .map(|(&first_byte, rest)| {
-            read_prefix(first_byte).map(|(int, size)| Some((int, rest.get(0..size)?)))
-        })
-        .transpose()?
-        .flatten()
-        .ok_or_else(|| io::Error::from(UnexpectedEof))?;
+    let pos = slice.position();
+
+    let (int, rest) = {
+        let slice = &slice.get_ref().as_ref()[pos as usize..];
+
+        slice
+            .split_first()
+            .map(|(&first_byte, rest)| {
+                read_prefix(first_byte).map(|(int, size)| Some((int, rest.get(0..size)?)))
+            })
+            .transpose()?
+            .flatten()
+            .ok_or_else(|| io::Error::from(UnexpectedEof))?
+    };
 
     let pad = 8_u8.min(rest.len() as u8 + 1);
 
     let int = (1_u8..).zip(rest).fold(int, |int, (i, &byte)| {
-        int | u64::from(byte) << usize::from((i * 8) - pad)
+        int | (u64::from(byte) << usize::from((i * 8) - pad))
     });
 
     let advance_by = rest.len() as u64 + 1;
-    slice.set_position(slice.position() + advance_by);
+    slice.set_position(pos + advance_by);
 
     Ok(int)
 }
