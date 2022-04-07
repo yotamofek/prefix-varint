@@ -1,29 +1,16 @@
-mod overflow;
-mod rest_buf;
+#![feature(cursor_remaining)]
 
 use std::{
     io::{self, Read, Write},
     mem::size_of,
+    slice,
 };
 
-pub use crate::overflow::OverflowError;
-
 #[inline]
-fn read_size_from_prefix(byte: u8) -> Result<usize, OverflowError> {
+pub fn read_prefix(byte: u8) -> (u64, usize) {
     let size = byte.trailing_zeros() as usize;
 
-    if size > size_of::<u64>() {
-        Err(OverflowError::new(size))
-    } else {
-        Ok(size)
-    }
-}
-
-#[inline]
-pub fn read_prefix(byte: u8) -> Result<(u64, usize), OverflowError> {
-    let size = read_size_from_prefix(byte)?;
-
-    Ok(((u64::from(byte) >> (size + 1)), size))
+    ((u64::from(byte) >> (size + 1)), size)
 }
 
 #[inline]
@@ -32,29 +19,27 @@ where
     R: Read,
 {
     let prefix_byte = {
-        let mut buf = [u8::MIN];
-        rdr.read_exact(&mut buf)?;
+        let mut byte = 0;
+        rdr.read_exact(slice::from_mut(&mut byte))?;
 
-        buf[0]
+        byte
     };
 
-    let (mut int, size) = read_prefix(prefix_byte)?;
+    let (mut int, size) = read_prefix(prefix_byte);
 
-    let rest = {
-        let mut buf = rest_buf::RestBuf::new(size);
-        rdr.read_exact(buf.as_mut())?;
-        buf
-    };
+    let mut rest = [0; size_of::<u64>()];
+    rdr.read_exact(&mut rest[..size])?;
 
-    let pad = 8_u8.min(size as u8 + 1);
+    let pad = (size + 1).min(8) as u8;
 
     for (i, byte) in (1_u8..).zip(rest) {
-        int |= u64::from(byte) << usize::from((i * 8) - pad)
+        int |= u64::from(byte) << ((i * 8) - pad)
     }
 
     Ok(int)
 }
 
+#[inline]
 fn calc_varint_size(int: u64) -> usize {
     let bits = match int.checked_next_power_of_two() {
         Some(pow) => match pow {

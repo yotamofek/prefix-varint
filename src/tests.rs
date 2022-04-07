@@ -45,33 +45,16 @@ where
 }
 
 #[test]
-fn test_read_size_from_prefix() -> Result<(), OverflowError> {
-    assert_eq!(read_size_from_prefix(0b1010_1011)?, 0);
-    assert_eq!(read_size_from_prefix(0b1010_1010)?, 1);
-    assert_eq!(read_size_from_prefix(0b1010_1100)?, 2);
-    assert_eq!(read_size_from_prefix(0b1011_1000)?, 3);
-    assert_eq!(read_size_from_prefix(0b1011_0000)?, 4);
-    assert_eq!(read_size_from_prefix(0b1010_0000)?, 5);
-    assert_eq!(read_size_from_prefix(0b1100_0000)?, 6);
-    assert_eq!(read_size_from_prefix(0b1000_0000)?, 7);
-    assert_eq!(read_size_from_prefix(0b0000_0000)?, 8);
-
-    Ok(())
-}
-
-#[test]
-fn test_read_prefix() -> Result<(), OverflowError> {
-    assert_eq!(read_prefix(0b1010_1011)?, (0b101_0101, 0));
-    assert_eq!(read_prefix(0b1010_1010)?, (0b10_1010, 1));
-    assert_eq!(read_prefix(0b1010_1100)?, (0b1_0101, 2));
-    assert_eq!(read_prefix(0b1011_1000)?, (0b1011, 3));
-    assert_eq!(read_prefix(0b1011_0000)?, (0b101, 4));
-    assert_eq!(read_prefix(0b1010_0000)?, (0b10, 5));
-    assert_eq!(read_prefix(0b1100_0000)?, (0b1, 6));
-    assert_eq!(read_prefix(0b1000_0000)?, (0b0, 7));
-    assert_eq!(read_prefix(0b0000_0000)?, (0b0, 8));
-
-    Ok(())
+fn test_read_prefix() {
+    assert_eq!(read_prefix(0b1010_1011), (0b101_0101, 0));
+    assert_eq!(read_prefix(0b1010_1010), (0b10_1010, 1));
+    assert_eq!(read_prefix(0b1010_1100), (0b1_0101, 2));
+    assert_eq!(read_prefix(0b1011_1000), (0b1011, 3));
+    assert_eq!(read_prefix(0b1011_0000), (0b101, 4));
+    assert_eq!(read_prefix(0b1010_0000), (0b10, 5));
+    assert_eq!(read_prefix(0b1100_0000), (0b1, 6));
+    assert_eq!(read_prefix(0b1000_0000), (0b0, 7));
+    assert_eq!(read_prefix(0b0000_0000), (0b0, 8));
 }
 
 #[test]
