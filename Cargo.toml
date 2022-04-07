@@ -1,6 +1,6 @@
 [package]
 name = "prefix-varint"
-version = "0.0.1-alpha.5"
+version = "0.0.1-alpha.6"
 authors = ["Yotam Ofek <yotam.ofek@gmail.com>"]
 edition = "2018"
 license = "MIT"
