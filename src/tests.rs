@@ -1,4 +1,4 @@
-use std::iter;
+use std::{iter, mem::size_of};
 
 use rand::{thread_rng, Rng as _};
 
@@ -84,7 +84,7 @@ fn test_read_varint() -> io::Result<()> {
             cursor.get_mut().splice(0..0, iter::repeat(0).take(5));
             cursor.set_position(5);
 
-            assert_eq!(read_varint_from_slice(&mut cursor)?, $expected);
+            assert_eq!(read_varint(&mut cursor)?, $expected);
             assert_eq!(cursor.position(), $bytes.len() as u64 + 5);
         };
         ($bytes:expr, error_kind = $error_kind:expr) => {
@@ -95,7 +95,7 @@ fn test_read_varint() -> io::Result<()> {
                 $error_kind
             );
             assert_eq!(
-                read_varint_from_slice(&mut io::Cursor::new($bytes))
+                read_varint(&mut io::Cursor::new($bytes))
                     .unwrap_err()
                     .kind(),
                 $error_kind

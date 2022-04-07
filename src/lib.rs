@@ -1,16 +1,15 @@
-#![feature(int_bits_const, try_blocks)]
-
 mod overflow;
 mod rest_buf;
 
 use std::{
-    io::{self, ErrorKind::UnexpectedEof, Read, Write},
+    io::{self, Read, Write},
     mem::size_of,
 };
 
 pub use crate::overflow::OverflowError;
 
-pub fn read_size_from_prefix(byte: u8) -> Result<usize, OverflowError> {
+#[inline]
+fn read_size_from_prefix(byte: u8) -> Result<usize, OverflowError> {
     let size = byte.trailing_zeros() as usize;
 
     if size > size_of::<u64>() {
@@ -20,6 +19,7 @@ pub fn read_size_from_prefix(byte: u8) -> Result<usize, OverflowError> {
     }
 }
 
+#[inline]
 pub fn read_prefix(byte: u8) -> Result<(u64, usize), OverflowError> {
     let size = read_size_from_prefix(byte)?;
 
@@ -55,36 +55,7 @@ where
     Ok(int)
 }
 
-#[inline]
-pub fn read_varint_from_slice<S: AsRef<[u8]>>(slice: &mut io::Cursor<S>) -> io::Result<u64> {
-    let pos = slice.position();
-
-    let (int, rest) = {
-        let slice = &slice.get_ref().as_ref()[pos as usize..];
-
-        slice
-            .split_first()
-            .map(|(&first_byte, rest)| {
-                read_prefix(first_byte).map(|(int, size)| Some((int, rest.get(0..size)?)))
-            })
-            .transpose()?
-            .flatten()
-            .ok_or_else(|| io::Error::from(UnexpectedEof))?
-    };
-
-    let pad = 8_u8.min(rest.len() as u8 + 1);
-
-    let int = (1_u8..).zip(rest).fold(int, |int, (i, &byte)| {
-        int | (u64::from(byte) << usize::from((i * 8) - pad))
-    });
-
-    let advance_by = rest.len() as u64 + 1;
-    slice.set_position(pos + advance_by);
-
-    Ok(int)
-}
-
-pub fn calc_varint_size(int: u64) -> usize {
+fn calc_varint_size(int: u64) -> usize {
     let bits = match int.checked_next_power_of_two() {
         Some(pow) => match pow {
             pow if pow > int => pow,
