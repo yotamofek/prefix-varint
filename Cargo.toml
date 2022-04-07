@@ -7,4 +7,9 @@ license = "MIT"
 description = "PrefixVarint encoding for u64 integers."
 
 [dev-dependencies]
+criterion = "0.3"
 rand = "0.8"
+
+[[bench]]
+name = "read"
+harness = false
